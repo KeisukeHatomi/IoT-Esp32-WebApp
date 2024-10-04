@@ -10,6 +10,7 @@ import {
   Flex,
   Button,
   TextAreaField,
+  Divider,
 } from "@aws-amplify/ui-react";
 import "@aws-amplify/ui-react/styles.css";
 
@@ -17,7 +18,33 @@ function App() {
   const [client, setClient] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [messages, setMessages] = useState([]);
+  const [subMessages, setSubMessages] = useState([]);
   const [pubMessage, setPubMessage] = useState("");
+  let str = [];
+
+  const command = {
+    Forward: {
+      command: "up",
+    },
+    Left: {
+      command: "left",
+    },
+    Right: {
+      command: "right",
+    },
+    Back: {
+      command: "down",
+    },
+    Stop: {
+      command: "stop",
+    },
+    SpeedUp: {
+      command: "speedUp",
+    },
+    SpeedDown: {
+      command: "speedDown",
+    },
+  };
 
   useEffect(() => {
     // MQTTサーバーに接続
@@ -36,12 +63,17 @@ function App() {
     });
 
     mqttClient.on("message", (topic, message) => {
-      console.log("Received message:", topic, message.toString());
-      // setMessages((prevMessages) => [
-      //   ...prevMessages,
-      //   { topic, message: message.toString() },
-      // ]);
-      setMessages(message.toString());
+      // console.log("Received message:", topic, message.toString());
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { topic, message: message.toString() },
+      ]);
+
+      str.push(message + "\n");
+      if (str.length > 5) {
+        str.shift(0);
+      }
+      setSubMessages(str);
     });
 
     setClient(mqttClient);
@@ -51,9 +83,10 @@ function App() {
     };
   }, []);
 
-  const publishMessage = () => {
+  const publishMessage = (mes) => {
+    console.log("mes🔵 ", JSON.stringify(mes));
     if (client && isConnected) {
-      client.publish("emqx/esp32", pubMessage);
+      client.publish("emqx/esp32", JSON.stringify(mes));
       setPubMessage("");
     }
   };
@@ -63,26 +96,57 @@ function App() {
     setPubMessage(e.currentTarget.value);
   };
 
+  const handleForward = () => {
+    publishMessage(command.Forward);
+  };
+
+  const handleLeft = () => {
+    publishMessage(command.Left);
+  };
+
+  const handleRight = () => {
+    publishMessage(command.Right);
+  };
+
+  const handleBack = () => {
+    publishMessage(command.Back);
+  };
+
+  const handleStop = () => {
+    publishMessage(command.Stop);
+  };
+
+  const handleSpeedUp = () => {
+    publishMessage(command.SpeedUp);
+  };
+
+  const handleSpeedDown = () => {
+    publishMessage(command.SpeedDown);
+  };
+
   return (
     <Authenticator>
       {({ signOut, user }) => (
         <div>
           <Flex direction="column" gap="small" width="100%" alignItems="center">
-            <h1>MQTT Web Client</h1>
-            <h2>Hello {user?.signInDetails.loginId}</h2>
-            <Button onClick={signOut} width="30%" marginBottom={50}>
+            <h1>MQTT Operation Panel</h1>
+            <h2>{user?.signInDetails.loginId}</h2>
+            <Button marginBottom={30} onClick={signOut} width="30%">
               Sign out
             </Button>
-            <Flex
+            <Divider
+              marginBottom={40}
+              marginTop={0}
+              orientation="horizontal"
+            />
+            {/* <Flex
               direction="row"
               gap="small"
               width="100%"
               alignItems="stretch"
               alignContent="space-between"
             >
-              <Label htmlFor="message">
-                Message:
-              </Label>
+              <Label htmlFor="message">Message:</Label>
               <Input
                 id="massage"
                 name="message"
@@ -92,7 +156,7 @@ function App() {
                 value={pubMessage}
               />
               <Button onClick={publishMessage}>Publish</Button>
-            </Flex>
+            </Flex> */}
           </Flex>
           <div>
             {/* <ul>
@@ -102,12 +166,41 @@ function App() {
                 </li>
               ))}
             </ul> */}
+            <Flex direction="column" alignItems={"center"}>
+              <Button width={60} onClick={handleForward}>
+                UP
+              </Button>
+              <Flex>
+                <Button width={60} onClick={handleLeft}>
+                  LEFT
+                </Button>
+                <Button width={60} onClick={handleStop}>
+                  STOP
+                </Button>
+                <Button width={60} onClick={handleRight}>
+                  RIGHT
+                </Button>
+              </Flex>
+              <Button width={60} onClick={handleBack}>
+                DOWN
+              </Button>
+              <Flex>
+                <Button width={140} onClick={handleSpeedUp}>
+                  SPEED UP
+                </Button>
+                <Button width={140} onClick={handleSpeedDown}>
+                  SPEED DOWN
+                </Button>
+              </Flex>
+            </Flex>
+
             <TextAreaField
               descriptiveText="Subscribe Messages"
               name="subscribe"
-              rows={5}
-              value={messages}
+              rows={6}
+              value={subMessages}
               marginTop={30}
+              isReadOnly={true}
             />
           </div>
         </div>
